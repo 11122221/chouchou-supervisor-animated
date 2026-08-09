@@ -1,7 +1,1 @@
-{
-  "bundle": {
-    "resources": {
-      "../resources/videos/windows/kitty-screen.webm": "videos/kitty-screen-windows.webm"
-    }
-  }
-}
+{}

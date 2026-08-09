@@ -6,11 +6,11 @@ const zh_CN: Translation = {
     durationLabel: "持续多久",
     languageLabel: "语言",
     preview: "预览",
-    github: "GitHub",
+    github: "上游 GitHub",
     updateAvailable: "发现新版本",
     updateDescription: "GitHub Releases 上已有新版可下载。",
     updateOpen: "查看更新",
-    credit: "由 Elliot 和他的女儿“毛球”（一只4岁的挪威森林猫）共同开发",
+    credit: "基于 Elliot 的 Kitty Screen（MIT）定制，动画形象为臭臭",
   },
   durations: {
     seconds15: "15秒",

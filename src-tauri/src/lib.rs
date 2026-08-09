@@ -200,7 +200,7 @@ fn create_screensaver_window(app: &mut tauri::App) -> tauri::Result<()> {
         "screensaver",
         WebviewUrl::App("index.html?screensaver".into()),
     )
-    .title("Kitty Screen")
+    .title("臭臭监督官动态版")
     .decorations(false)
     .fullscreen(false)
     .always_on_top(true)
@@ -317,12 +317,12 @@ fn setup_tray(app: &mut tauri::App) -> tauri::Result<()> {
             .replace(quit_item);
     }
 
-    let tray = TrayIconBuilder::with_id("kitty-screen")
+    let tray = TrayIconBuilder::with_id("chouchou-supervisor-animated")
         .icon(tray_icon)
         .icon_as_template(true)
         .menu(&menu)
         .show_menu_on_left_click(true)
-        .tooltip("Kitty Screen")
+        .tooltip("臭臭监督官动态版")
         .on_menu_event(|app, event| {
             let app = app.clone();
             let id = event.id().as_ref().to_string();

@@ -1,6 +1,7 @@
 {
-  "name": "kitty-screen",
-  "version": "0.1.6",
+  "name": "chouchou-supervisor-animated",
+  "version": "0.1.0",
+  "packageManager": "pnpm@11.16.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,14 +10,15 @@
     "app:build:mac:signed": "node scripts/build-macos.mjs --skip-notarization --target universal-apple-darwin --bundles app,dmg --config src-tauri/tauri.macos.conf.json",
     "app:build:windows": "tauri build --target x86_64-pc-windows-msvc --bundles nsis --config src-tauri/tauri.windows.conf.json",
     "app:dev": "tauri dev",
-    "build": "bun run i18n && tsc && vite build",
-    "check": "bun run format && bun run typecheck && bun run lint",
+    "build": "pnpm run i18n && tsc && vite build",
+    "check": "pnpm run format && pnpm run typecheck && pnpm run lint",
     "check:staged": "lint-staged",
     "dev": "vite",
-    "format": "bunx sort-package-json && prettier --write --log-level warn .",
+    "format": "prettier --write --log-level warn .",
     "i18n": "typesafe-i18n --no-watch",
     "icons": "node scripts/generate-icons.mjs",
     "lint": "(oxlint --fix . && knip) || echo '[warn] lint failed'",
+    "keyframes:videos": "node scripts/generate-keyframe-videos.mjs",
     "prepare": "simple-git-hooks",
     "preview": "vite preview",
     "release:mac": "node scripts/release-macos.mjs",
@@ -25,7 +27,7 @@
     "videos": "node scripts/generate-videos.mjs"
   },
   "simple-git-hooks": {
-    "pre-commit": "test -f \"$(git rev-parse --git-path MERGE_HEAD)\" && exit 0 || bun run check:staged"
+    "pre-commit": "test -f \"$(git rev-parse --git-path MERGE_HEAD)\" && exit 0 || pnpm run check:staged"
   },
   "lint-staged": {
     "*": "prettier --write --log-level warn --ignore-unknown",
@@ -44,6 +46,8 @@
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
+    "ffmpeg-static": "^5.3.0",
+    "ffprobe-static": "^3.1.0",
     "knip": "^5.85.0",
     "lint-staged": "^16.4.0",
     "oxlint": "^1.62.0",
@@ -54,5 +58,5 @@
     "typescript": "~5.8.3",
     "vite": "^7.0.4"
   },
-  "productName": "Kitty Screen"
+  "productName": "臭臭监督官动态版"
 }

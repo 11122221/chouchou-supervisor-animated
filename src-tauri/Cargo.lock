@@ -1890,8 +1890,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "kitty-screen"
-version = "0.1.6"
+name = "chouchou-supervisor-animated"
+version = "0.1.0"
 dependencies = [
  "serde",
  "serde_json",

@@ -1,5 +1,15 @@
 # Prompts
 
+## Chouchou frames used by this project
+
+Built-in Codex image generation was given the private identity references in `refs/chouchou/` and the following production prompt for each numbered pose:
+
+```text
+Create one photorealistic animation keyframe of the same gray-and-white long-haired cat, Chouchou. Lock the identity to the supplied reference photos: round gray-and-white face, amber eyes, pink nose, white chest and paws, dense fluffy coat and tail. Match the requested walk, turn, crouch, lie-down or subtle blink pose for this frame. Keep the whole cat anatomically correct and inside a 16:9 canvas. Use a clean bright-green chroma background; no room, furniture, floor, props, text, watermark, extra animal or cast shadow. Preserve the same cat across every frame.
+```
+
+The twelve results are stored in `assets/raw-chouchou/001.png` through `012.png`. Runtime-ready transparent and despilled versions are stored in `public/chouchou/`.
+
 ## Keyframe Image Sequence
 
 Generate a reusable green-screen keyframe sequence for a cat screensaver animation.

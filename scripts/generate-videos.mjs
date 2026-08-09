@@ -9,6 +9,8 @@ import {
 import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import ffmpegPath from "ffmpeg-static";
+import ffprobeStatic from "ffprobe-static";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const platform = parsePlatform(process.argv.slice(2));
@@ -18,9 +20,9 @@ const loopInput = resolve(repoRoot, "assets/kitty-loop.mp4");
 const loopDuration = "3.03";
 const loopRepeats = 5;
 
-const keyColor = "0x00d400";
-const similarity = "0.14";
-const blend = "0.05";
+const keyColor = "0x00ff00";
+const similarity = "0.20";
+const blend = "0.06";
 const despillMix = "0.4";
 const despillExpand = "0.08";
 const crf = "31";
@@ -36,8 +38,12 @@ const outputs = {
   windows: resolve(repoRoot, "resources/videos/windows/kitty-screen.webm"),
 };
 
-ensureCommand("ffmpeg");
-ensureCommand("ffprobe");
+if (!ffmpegPath || !ffprobeStatic?.path) {
+  throw new Error("Project-local FFmpeg or FFprobe binary is unavailable");
+}
+
+ensureCommand(ffmpegPath);
+ensureCommand(ffprobeStatic.path);
 ensureInput(introInput);
 ensureInput(loopInput);
 
@@ -139,7 +145,7 @@ function concatenateSegments(segments, output) {
     segments.map((segment) => `file '${escapeConcatPath(segment)}'`).join("\n"),
   );
 
-  run("ffmpeg", [
+  run(ffmpegPath, [
     "-hide_banner",
     "-y",
     "-f",
@@ -161,7 +167,7 @@ function encodeLoopedMacHevc(intro, loop, output) {
 
   mkdirSync(dirname(output), { recursive: true });
 
-  run("ffmpeg", [
+  run(ffmpegPath, [
     "-hide_banner",
     "-y",
     "-i",
@@ -196,7 +202,7 @@ function runFfmpeg(input, output, duration, outputArgs) {
     args.push("-t", duration);
   }
 
-  run("ffmpeg", [...args, ...outputArgs, output]);
+  run(ffmpegPath, [...args, ...outputArgs, output]);
 }
 
 function ensureCommand(command) {
@@ -241,7 +247,7 @@ function parsePlatform(args) {
 
 function verifyWebmAlpha(output) {
   const result = spawnSync(
-    "ffprobe",
+    ffprobeStatic.path,
     [
       "-v",
       "error",
@@ -265,7 +271,7 @@ function verifyWebmAlpha(output) {
 
 function verifyTransparentCorner(output, inputArgs = []) {
   const result = spawnSync(
-    "ffmpeg",
+    ffmpegPath,
     [
       "-hide_banner",
       "-loglevel",

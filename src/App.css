@@ -274,23 +274,42 @@ h1 {
   width: 100vw;
 }
 
-.screensaver__video {
+.chouchou-stage {
   background: rgba(0, 0, 0, 0);
   height: 100%;
   inset: 0;
-  object-fit: cover;
-  object-position: center;
-  opacity: 0;
+  opacity: 1;
   pointer-events: none;
   position: absolute;
-  transition: opacity 140ms linear;
   width: 100%;
-  will-change: opacity;
+  will-change: transform;
   z-index: 0;
 }
 
-.screensaver__video[data-active="true"] {
-  opacity: 1;
+.chouchou-stage[data-settled="true"] {
+  animation: chouchou-breathe 3.2s ease-in-out infinite;
+}
+
+.chouchou-cat {
+  height: 100%;
+  inset: 0;
+  object-fit: contain;
+  object-position: center bottom;
+  pointer-events: none;
+  position: absolute;
+  user-select: none;
+  width: 100%;
+}
+
+@keyframes chouchou-breathe {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  50% {
+    transform: translateY(0.35vh) scale(1.004);
+  }
 }
 
 .screensaver__content {
