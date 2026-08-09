@@ -1,6 +1,6 @@
 {
   "name": "chouchou-supervisor-animated",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "packageManager": "pnpm@11.16.0",
   "private": true,
   "type": "module",
@@ -58,5 +58,5 @@
     "typescript": "~5.8.3",
     "vite": "^7.0.4"
   },
-  "productName": "臭臭监督官动态版"
+  "productName": "Chouchou-Supervisor"
 }
