@@ -4,6 +4,8 @@ A Windows/macOS desktop break reminder built with Tauri 2, React and TypeScript.
 
 The animation is based on the cat photos and videos supplied for this project. It uses transparent PNG keyframes plus CSS motion, avoiding the visible deformation that can occur when unrelated poses are joined with optical-flow video interpolation.
 
+The settings page can allow immediate closing or lock manual close controls for the first 30 seconds. The natural supervisor countdown still completes normally.
+
 ## Development
 
 Requirements: Node.js 20+, pnpm 10+, Rust stable, and the platform prerequisites listed in the Tauri documentation.

@@ -353,14 +353,42 @@ h1 {
     "Press Start 2P", ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
 }
 
+.screensaver__close-control {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  left: calc(1.25rem + var(--box-shadow-width));
+  position: fixed;
+  top: calc(1.25rem + var(--box-shadow-width));
+  z-index: 3;
+}
+
 .screensaver__close {
   filter: drop-shadow(0 7px 0 rgba(16, 16, 20, 0.4))
     drop-shadow(0 14px 16px rgba(16, 16, 20, 0.32));
-  position: fixed;
-  left: calc(1.25rem + var(--box-shadow-width));
-  right: auto;
-  top: calc(1.25rem + var(--box-shadow-width));
-  z-index: 3;
+}
+
+.screensaver__close:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.55) drop-shadow(0 4px 0 rgba(16, 16, 20, 0.28));
+  opacity: 0.72;
+}
+
+.screensaver__close-lock {
+  background: #fbfaf1;
+  box-shadow:
+    -3px 0 0 #101014,
+    3px 0 0 #101014,
+    0 3px 0 #101014,
+    0 -3px 0 #101014;
+  color: #101014;
+  font-family: var(--cjk-ui-font);
+  font-size: clamp(0.68rem, 1.5vw, 0.82rem);
+  font-weight: 900;
+  margin: 3px;
+  max-width: min(15rem, calc(100vw - 3rem));
+  padding: 0.45rem 0.6rem;
 }
 
 @media (max-width: 720px) {

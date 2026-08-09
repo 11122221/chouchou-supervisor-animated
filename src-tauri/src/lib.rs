@@ -14,10 +14,20 @@ use tauri::{
     WebviewWindowBuilder, WindowEvent, Wry,
 };
 
-const DELAY_OPTIONS: [u64; 6] = [15 * 60, 30 * 60, 60 * 60, 90 * 60, 120 * 60, 180 * 60];
+const DELAY_OPTIONS: [u64; 7] = [
+    15 * 60,
+    30 * 60,
+    45 * 60,
+    60 * 60,
+    90 * 60,
+    120 * 60,
+    180 * 60,
+];
 const DURATION_OPTIONS: [u64; 10] = [15, 30, 60, 90, 120, 180, 300, 600, 900, 1800];
-const DEFAULT_DELAY_SECONDS: u64 = 30 * 60;
-const DEFAULT_DURATION_SECONDS: u64 = 30;
+const CLOSE_DELAY_OPTIONS: [u64; 2] = [0, 30];
+const DEFAULT_DELAY_SECONDS: u64 = 45 * 60;
+const DEFAULT_DURATION_SECONDS: u64 = 5 * 60;
+const DEFAULT_CLOSE_DELAY_SECONDS: u64 = 0;
 const DEFAULT_LOCALE: &str = "zh-CN";
 const PREVIEW_SECONDS: u64 = 30;
 const LOCALE_OPTIONS: [&str; 9] = [
@@ -29,6 +39,7 @@ const LOCALE_OPTIONS: [&str; 9] = [
 struct Settings {
     delay_seconds: u64,
     duration_seconds: u64,
+    close_delay_seconds: u64,
     locale: String,
 }
 
@@ -37,6 +48,7 @@ impl Default for Settings {
         Self {
             delay_seconds: DEFAULT_DELAY_SECONDS,
             duration_seconds: DEFAULT_DURATION_SECONDS,
+            close_delay_seconds: DEFAULT_CLOSE_DELAY_SECONDS,
             locale: DEFAULT_LOCALE.to_string(),
         }
     }
@@ -47,6 +59,7 @@ impl Default for Settings {
 struct ScreensaverState {
     is_showing: bool,
     duration_seconds: u64,
+    started_at_ms: u64,
     ends_at_ms: u64,
     mode: String,
     generation: u64,
@@ -57,6 +70,7 @@ impl Default for ScreensaverState {
         Self {
             is_showing: false,
             duration_seconds: DEFAULT_DURATION_SECONDS,
+            started_at_ms: 0,
             ends_at_ms: 0,
             mode: "scheduled".to_string(),
             generation: 0,
@@ -129,7 +143,7 @@ fn preview_screensaver(app: AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 fn hide_screensaver(app: AppHandle) -> Result<(), String> {
-    hide_screensaver_inner(&app)
+    hide_screensaver_requested(&app)
 }
 
 fn validate_settings(settings: Settings) -> Settings {
@@ -149,6 +163,11 @@ fn validate_settings(settings: Settings) -> Settings {
             settings.duration_seconds
         } else {
             DEFAULT_DURATION_SECONDS
+        },
+        close_delay_seconds: if CLOSE_DELAY_OPTIONS.contains(&settings.close_delay_seconds) {
+            settings.close_delay_seconds
+        } else {
+            DEFAULT_CLOSE_DELAY_SECONDS
         },
         locale,
     }
@@ -356,7 +375,7 @@ fn toggle_screensaver(app: &AppHandle) -> Result<(), String> {
     };
 
     if is_showing {
-        hide_screensaver_inner(app)
+        hide_screensaver_requested(app)
     } else {
         let duration_seconds = {
             let state = app.state::<AppState>();
@@ -368,6 +387,7 @@ fn toggle_screensaver(app: &AppHandle) -> Result<(), String> {
 }
 
 fn show_screensaver(app: &AppHandle, duration_seconds: u64, mode: &str) -> Result<(), String> {
+    let started_at_ms = now_ms();
     let generation = {
         let state = app.state::<AppState>();
         let mut screensaver = state
@@ -377,7 +397,9 @@ fn show_screensaver(app: &AppHandle, duration_seconds: u64, mode: &str) -> Resul
 
         screensaver.is_showing = true;
         screensaver.duration_seconds = duration_seconds;
-        screensaver.ends_at_ms = now_ms().saturating_add(duration_seconds.saturating_mul(1000));
+        screensaver.started_at_ms = started_at_ms;
+        screensaver.ends_at_ms =
+            started_at_ms.saturating_add(duration_seconds.saturating_mul(1000));
         screensaver.mode = mode.to_string();
         screensaver.generation = screensaver.generation.saturating_add(1);
         screensaver.generation
@@ -407,6 +429,41 @@ fn show_screensaver(app: &AppHandle, duration_seconds: u64, mode: &str) -> Resul
     emit_screensaver_state(app);
     schedule_auto_hide(app.clone(), generation, duration_seconds);
     Ok(())
+}
+
+fn hide_screensaver_requested(app: &AppHandle) -> Result<(), String> {
+    let close_delay_seconds = {
+        let state = app.state::<AppState>();
+        let settings = state
+            .settings
+            .lock()
+            .map_err(|error| error.to_string())?;
+        settings.close_delay_seconds
+    };
+
+    if close_delay_seconds > 0 {
+        let unlocks_at_ms = {
+            let state = app.state::<AppState>();
+            let screensaver = state
+                .screensaver
+                .lock()
+                .map_err(|error| error.to_string())?;
+
+            if !screensaver.is_showing {
+                return Ok(());
+            }
+
+            screensaver
+                .started_at_ms
+                .saturating_add(close_delay_seconds.saturating_mul(1000))
+        };
+
+        if now_ms() < unlocks_at_ms {
+            return Err("screensaver close is temporarily locked".to_string());
+        }
+    }
+
+    hide_screensaver_inner(app)
 }
 
 fn place_foremost_overlay(app: &AppHandle, window: &WebviewWindow) -> Result<(), String> {
@@ -445,6 +502,7 @@ fn hide_screensaver_inner(app: &AppHandle) -> Result<(), String> {
 
         let should_reset = screensaver.mode != "preview";
         screensaver.is_showing = false;
+        screensaver.started_at_ms = 0;
         screensaver.ends_at_ms = 0;
         screensaver.generation = screensaver.generation.saturating_add(1);
         should_reset
@@ -520,37 +578,37 @@ fn tray_labels(locale: &str) -> TrayLabels {
         "en" => TrayLabels {
             open_app: "Open App",
             show: "Show now",
-            hide: "Close now",
+            hide: "Close supervisor",
             quit: "Quit",
         },
         "zh-HK" => TrayLabels {
             open_app: "開啟 App",
             show: "立即顯示",
-            hide: "立即關閉",
+            hide: "關閉監督畫面",
             quit: "退出",
         },
         "zh-TW" => TrayLabels {
             open_app: "開啟 App",
             show: "立即顯示",
-            hide: "立即關閉",
+            hide: "關閉監督畫面",
             quit: "退出",
         },
         "ja" => TrayLabels {
             open_app: "アプリを開く",
             show: "今すぐ表示",
-            hide: "今すぐ閉じる",
+            hide: "閉じる",
             quit: "終了",
         },
         "ko" => TrayLabels {
             open_app: "앱 열기",
             show: "지금 표시",
-            hide: "지금 닫기",
+            hide: "닫기",
             quit: "종료",
         },
         "es" => TrayLabels {
             open_app: "Abrir app",
             show: "Mostrar ahora",
-            hide: "Cerrar ahora",
+            hide: "Cerrar",
             quit: "Salir",
         },
         "fr" => TrayLabels {
@@ -562,13 +620,13 @@ fn tray_labels(locale: &str) -> TrayLabels {
         "pt" => TrayLabels {
             open_app: "Abrir app",
             show: "Mostrar agora",
-            hide: "Fechar agora",
+            hide: "Fechar",
             quit: "Sair",
         },
         _ => TrayLabels {
             open_app: "打开 App",
             show: "立即显示",
-            hide: "立即关闭",
+            hide: "关闭监督界面",
             quit: "退出",
         },
     }

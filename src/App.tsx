@@ -25,12 +25,14 @@ loadAllLocales();
 type Settings = {
   delaySeconds: number;
   durationSeconds: number;
+  closeDelaySeconds: 0 | 30;
   locale: Locales;
 };
 
 type ScreensaverState = {
   isShowing: boolean;
   durationSeconds: number;
+  startedAtMs: number;
   endsAtMs: number;
   mode: "scheduled" | "manual" | "preview";
   generation: number;
@@ -74,6 +76,7 @@ const DEFAULT_LOCALE: Locales = "zh-CN";
 const DEFAULT_SETTINGS: Settings = {
   delaySeconds: 45 * 60,
   durationSeconds: 5 * 60,
+  closeDelaySeconds: 0,
   locale: DEFAULT_LOCALE,
 };
 
@@ -112,6 +115,7 @@ const CHOUCHOU_LOOP_FRAMES = [
 const DEFAULT_SCREENSAVER_STATE: ScreensaverState = {
   isShowing: false,
   durationSeconds: 30,
+  startedAtMs: 0,
   endsAtMs: 0,
   mode: "scheduled",
   generation: 0,
@@ -134,6 +138,10 @@ function normalizeSettings(settings: Partial<Settings>): Settings {
     delaySeconds: settings.delaySeconds ?? DEFAULT_SETTINGS.delaySeconds,
     durationSeconds:
       settings.durationSeconds ?? DEFAULT_SETTINGS.durationSeconds,
+    closeDelaySeconds:
+      settings.closeDelaySeconds === 30
+        ? 30
+        : DEFAULT_SETTINGS.closeDelaySeconds,
     locale:
       settings.locale && isSupportedLocale(settings.locale)
         ? settings.locale
@@ -361,6 +369,33 @@ function languageOptions(LL: TranslationFunctions) {
   ] satisfies Array<{ label: ReactNode; value: Locales }>;
 }
 
+function closeDelayCopy(locale: Locales) {
+  if (locale === "zh-CN") {
+    return {
+      label: "关闭方式",
+      immediate: "立即关闭",
+      delayed: "30 秒后可关闭",
+      locked: (seconds: number) => `${seconds} 秒后可关闭`,
+    };
+  }
+
+  if (locale === "zh-HK" || locale === "zh-TW") {
+    return {
+      label: "關閉方式",
+      immediate: "立即關閉",
+      delayed: "30 秒後可關閉",
+      locked: (seconds: number) => `${seconds} 秒後可關閉`,
+    };
+  }
+
+  return {
+    label: "Close behavior",
+    immediate: "Close immediately",
+    delayed: "Unlock after 30 seconds",
+    locked: (seconds: number) => `Close available in ${seconds}s`,
+  };
+}
+
 type OptionValue = number | string;
 
 type OptionGroupProps<T extends OptionValue> = {
@@ -422,6 +457,7 @@ function App() {
           ...DEFAULT_SCREENSAVER_STATE,
           isShowing: true,
           durationSeconds: 5 * 60,
+          startedAtMs: Date.now(),
           endsAtMs: Date.now() + 5 * 60 * 1000,
           mode: "preview",
           generation: 1,
@@ -434,6 +470,17 @@ function App() {
   const delayChoices = useMemo(() => delayOptions(LL), [LL]);
   const durationChoices = useMemo(() => durationOptions(LL), [LL]);
   const languageChoices = useMemo(() => languageOptions(LL), [LL]);
+  const closeCopy = useMemo(
+    () => closeDelayCopy(settings.locale),
+    [settings.locale],
+  );
+  const closeDelayChoices = useMemo(
+    () => [
+      { label: closeCopy.immediate, value: 0 as const },
+      { label: closeCopy.delayed, value: 30 as const },
+    ],
+    [closeCopy],
+  );
 
   const refreshScreensaverState = useCallback(async () => {
     try {
@@ -565,7 +612,9 @@ function App() {
   }, [openExternalUrl, updateInfo]);
 
   if (isScreensaver) {
-    return <ScreensaverView LL={LL} state={screensaverState} />;
+    return (
+      <ScreensaverView LL={LL} settings={settings} state={screensaverState} />
+    );
   }
 
   return (
@@ -605,6 +654,16 @@ function App() {
           }
           options={durationChoices}
           value={settings.durationSeconds}
+        />
+
+        <OptionGroup
+          id="close-delay"
+          label={closeCopy.label}
+          onChange={(closeDelaySeconds) =>
+            saveSettings({ ...settings, closeDelaySeconds })
+          }
+          options={closeDelayChoices}
+          value={settings.closeDelaySeconds}
         />
 
         <OptionGroup
@@ -672,13 +731,20 @@ function UpdateNotice({
 
 function ScreensaverView({
   LL,
+  settings,
   state,
 }: {
   LL: TranslationFunctions;
+  settings: Settings;
   state: ScreensaverState;
 }) {
   const [showClock, setShowClock] = useState(false);
   const [animationStep, setAnimationStep] = useState(0);
+  const [clockNowMs, setClockNowMs] = useState(Date.now());
+  const closeCopy = useMemo(
+    () => closeDelayCopy(settings.locale),
+    [settings.locale],
+  );
   const target = useMemo(() => {
     if (state.endsAtMs > Date.now()) {
       return state.endsAtMs;
@@ -714,6 +780,28 @@ function ScreensaverView({
       image.src = `/chouchou/${frame}.png`;
     }
   }, []);
+
+  useEffect(() => {
+    setClockNowMs(Date.now());
+
+    if (!state.isShowing || settings.closeDelaySeconds === 0) {
+      return;
+    }
+
+    const closeTimer = window.setInterval(() => {
+      setClockNowMs(Date.now());
+    }, 250);
+
+    return () => window.clearInterval(closeTimer);
+  }, [settings.closeDelaySeconds, state.generation, state.isShowing]);
+
+  const closeUnlocksAtMs =
+    state.startedAtMs + settings.closeDelaySeconds * 1000;
+  const closeLockSeconds = Math.max(
+    0,
+    Math.ceil((closeUnlocksAtMs - clockNowMs) / 1000),
+  );
+  const canClose = closeLockSeconds === 0;
 
   const close = useCallback(async () => {
     try {
@@ -782,15 +870,27 @@ function ScreensaverView({
           to={target}
         />
       </section>
-      <Button
-        aria-label={String(LL.screensaver.close())}
-        className="screensaver__close"
-        onClick={close}
-        size="icon"
-        variant="destructive"
-      >
-        <Power aria-hidden="true" />
-      </Button>
+      <div className="screensaver__close-control">
+        <Button
+          aria-label={
+            canClose
+              ? String(LL.screensaver.close())
+              : closeCopy.locked(closeLockSeconds)
+          }
+          className="screensaver__close"
+          disabled={!canClose}
+          onClick={close}
+          size="icon"
+          variant="destructive"
+        >
+          <Power aria-hidden="true" />
+        </Button>
+        {!canClose && (
+          <span className="screensaver__close-lock" role="status">
+            {closeCopy.locked(closeLockSeconds)}
+          </span>
+        )}
+      </div>
     </main>
   );
 }

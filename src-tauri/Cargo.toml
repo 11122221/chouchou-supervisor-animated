@@ -1,6 +1,6 @@
 [package]
 name = "chouchou-supervisor-animated"
-version = "0.2.1"
+version = "0.2.2"
 description = "A moving desktop break supervisor featuring Chouchou"
 authors = ["Chouchou Supervisor contributors"]
 edition = "2021"
