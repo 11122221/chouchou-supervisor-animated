@@ -13,7 +13,7 @@ import ffmpegPath from "ffmpeg-static";
 import ffprobeStatic from "ffprobe-static";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const framesDir = resolve(repoRoot, "assets/raw-chouchou");
+const framesDir = resolve(repoRoot, "assets/raw-chouchou-v2");
 const introOutput = resolve(repoRoot, "assets/kitty.mp4");
 const loopOutput = resolve(repoRoot, "assets/kitty-loop.mp4");
 const tempDir = mkdtempSync(join(tmpdir(), "chouchou-keyframes-"));
@@ -45,8 +45,10 @@ function generateIntro() {
     "008.png",
     "009.png",
     "010.png",
-    "010.png",
-    "010.png",
+    "011.png",
+    "012.png",
+    "012.png",
+    "012.png",
   ];
   copySequence(sequence, introDir);
 
@@ -80,15 +82,11 @@ function generateLoop() {
   const loopDir = join(tempDir, "loop");
   mkdirSync(loopDir, { recursive: true });
   const sequence = [
-    "010.png",
-    "010.png",
-    "010.png",
     "011.png",
     "012.png",
     "011.png",
-    "010.png",
-    "010.png",
-    "010.png",
+    "012.png",
+    "011.png",
   ];
   copySequence(sequence, loopDir);
 

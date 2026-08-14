@@ -287,7 +287,8 @@ h1 {
 }
 
 .chouchou-stage[data-settled="true"] {
-  animation: chouchou-breathe 3.2s ease-in-out infinite;
+  animation: chouchou-breathe 4.2s ease-in-out infinite;
+  transform-origin: 62% 82%;
 }
 
 .chouchou-cat {
@@ -295,10 +296,17 @@ h1 {
   inset: 0;
   object-fit: contain;
   object-position: center bottom;
+  opacity: 0;
   pointer-events: none;
   position: absolute;
+  transition: opacity 180ms ease-in-out;
   user-select: none;
+  will-change: opacity;
   width: 100%;
+}
+
+.chouchou-cat[data-active="true"] {
+  opacity: 1;
 }
 
 @keyframes chouchou-breathe {
@@ -308,7 +316,17 @@ h1 {
   }
 
   50% {
-    transform: translateY(0.35vh) scale(1.004);
+    transform: translateY(0.22vh) scale(1.0025);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chouchou-stage[data-settled="true"] {
+    animation: none;
+  }
+
+  .chouchou-cat {
+    transition: none;
   }
 }
 

@@ -80,7 +80,6 @@ const DEFAULT_SETTINGS: Settings = {
   locale: DEFAULT_LOCALE,
 };
 
-const CLOCK_REVEAL_DELAY_MS = 8_000;
 const ENABLE_UPDATE_CHECK = false;
 const GITHUB_REPOSITORY = "elliothux/kitty-screen";
 const GITHUB_URL = "https://github.com/elliothux/kitty-screen";
@@ -90,8 +89,8 @@ const JSDELIVR_LATEST_PACKAGE_URL = `https://cdn.jsdelivr.net/gh/${GITHUB_REPOSI
 const UPDATE_CHECK_CACHE_KEY = "chouchou-supervisor-animated:update-check";
 const UPDATE_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const UPDATE_CHECK_TIMEOUT_MS = 8_000;
+const CHOUCHOU_FRAME_BASE_URL = "/chouchou-v2";
 const CHOUCHOU_INTRO_FRAMES = [
-  "001",
   "001",
   "002",
   "003",
@@ -102,12 +101,12 @@ const CHOUCHOU_INTRO_FRAMES = [
   "008",
   "009",
   "010",
+  "011",
+  "012",
 ] as const;
-const CHOUCHOU_SETTLED_FRAME = "011";
-const CHOUCHOU_BLINK_FRAME = "012";
-const CHOUCHOU_BLINK_MIN_DELAY_MS = 3_800;
-const CHOUCHOU_BLINK_MAX_DELAY_MS = 6_800;
-const CHOUCHOU_BLINK_DURATION_MS = 140;
+const CHOUCHOU_INTRO_FRAME_DELAYS_MS = [
+  560, 420, 420, 460, 520, 540, 580, 620, 680, 760, 820, 900,
+] as const;
 
 const DEFAULT_SCREENSAVER_STATE: ScreensaverState = {
   isShowing: false,
@@ -737,9 +736,6 @@ function ScreensaverView({
 }) {
   const [showClock, setShowClock] = useState(false);
   const [animationStep, setAnimationStep] = useState(0);
-  const [settledFrame, setSettledFrame] = useState<string>(
-    CHOUCHOU_SETTLED_FRAME,
-  );
   const [clockNowMs, setClockNowMs] = useState(Date.now());
   const closeCopy = useMemo(
     () => closeDelayCopy(settings.locale),
@@ -756,74 +752,40 @@ function ScreensaverView({
   useEffect(() => {
     setShowClock(false);
     setAnimationStep(0);
-    setSettledFrame(CHOUCHOU_SETTLED_FRAME);
 
     if (!state.isShowing) {
       return;
     }
 
-    const clockTimer = window.setTimeout(() => {
-      setShowClock(true);
-    }, CLOCK_REVEAL_DELAY_MS);
-    const animationTimer = window.setInterval(() => {
-      setAnimationStep((step) => {
-        if (step >= CHOUCHOU_INTRO_FRAMES.length - 1) {
-          window.clearInterval(animationTimer);
-          return CHOUCHOU_INTRO_FRAMES.length;
+    let animationTimer = 0;
+
+    const scheduleNextFrame = (step: number) => {
+      animationTimer = window.setTimeout(() => {
+        const nextStep = step + 1;
+        setAnimationStep(nextStep);
+
+        if (nextStep >= CHOUCHOU_INTRO_FRAMES.length) {
+          setShowClock(true);
+          return;
         }
 
-        return step + 1;
-      });
-    }, 460);
+        scheduleNextFrame(nextStep);
+      }, CHOUCHOU_INTRO_FRAME_DELAYS_MS[step]);
+    };
+
+    scheduleNextFrame(0);
 
     return () => {
-      window.clearTimeout(clockTimer);
-      window.clearInterval(animationTimer);
+      window.clearTimeout(animationTimer);
     };
   }, [state.generation, state.isShowing]);
 
   useEffect(() => {
-    for (const frame of [
-      ...CHOUCHOU_INTRO_FRAMES,
-      CHOUCHOU_SETTLED_FRAME,
-      CHOUCHOU_BLINK_FRAME,
-    ]) {
+    for (const frame of CHOUCHOU_INTRO_FRAMES) {
       const image = new Image();
-      image.src = `/chouchou/${frame}.png`;
+      image.src = `${CHOUCHOU_FRAME_BASE_URL}/${frame}.png`;
     }
   }, []);
-
-  useEffect(() => {
-    if (!state.isShowing || animationStep < CHOUCHOU_INTRO_FRAMES.length) {
-      return;
-    }
-
-    let blinkTimer = 0;
-    let openEyesTimer = 0;
-
-    const scheduleBlink = () => {
-      const delay =
-        CHOUCHOU_BLINK_MIN_DELAY_MS +
-        Math.random() *
-          (CHOUCHOU_BLINK_MAX_DELAY_MS - CHOUCHOU_BLINK_MIN_DELAY_MS);
-
-      blinkTimer = window.setTimeout(() => {
-        setSettledFrame(CHOUCHOU_BLINK_FRAME);
-        openEyesTimer = window.setTimeout(() => {
-          setSettledFrame(CHOUCHOU_SETTLED_FRAME);
-          scheduleBlink();
-        }, CHOUCHOU_BLINK_DURATION_MS);
-      }, delay);
-    };
-
-    scheduleBlink();
-
-    return () => {
-      window.clearTimeout(blinkTimer);
-      window.clearTimeout(openEyesTimer);
-      setSettledFrame(CHOUCHOU_SETTLED_FRAME);
-    };
-  }, [animationStep, state.isShowing]);
 
   useEffect(() => {
     setClockNowMs(Date.now());
@@ -856,9 +818,10 @@ function ScreensaverView({
   }, []);
 
   const introComplete = animationStep >= CHOUCHOU_INTRO_FRAMES.length;
-  const frame = introComplete
-    ? settledFrame
-    : CHOUCHOU_INTRO_FRAMES[animationStep];
+  const activeFrameIndex = Math.min(
+    animationStep,
+    CHOUCHOU_INTRO_FRAMES.length - 1,
+  );
 
   return (
     <main className="screensaver">
@@ -867,12 +830,17 @@ function ScreensaverView({
         className="chouchou-stage"
         data-settled={introComplete ? "true" : undefined}
       >
-        <img
-          alt=""
-          className="chouchou-cat"
-          draggable={false}
-          src={`/chouchou/${frame}.png`}
-        />
+        {CHOUCHOU_INTRO_FRAMES.map((frame, index) => (
+          <img
+            alt=""
+            className="chouchou-cat"
+            data-active={index === activeFrameIndex ? "true" : undefined}
+            decoding="async"
+            draggable={false}
+            key={frame}
+            src={`${CHOUCHOU_FRAME_BASE_URL}/${frame}.png`}
+          />
+        ))}
       </div>
       <section className="screensaver__content" data-visible={showClock}>
         <FlipClockCountdown

@@ -1,6 +1,6 @@
 {
   "name": "chouchou-supervisor-animated",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "packageManager": "pnpm@11.16.0",
   "private": true,
   "type": "module",
